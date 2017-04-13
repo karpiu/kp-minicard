@@ -1,3 +1,19 @@
+KP-MiniCARD 1.0 based on MiniCARD 1.1
+ Michal Karpinski and Marek Piotrow
+ <karp@cs.uni.wroc.pl>,<mpi@cs.uni.wroc.pl>
+--------
+
+This is the extended version of the MiniCARD v. 1.1 by Mark Liffiton and Jordyn Maglalang.
+We have added the implementation of two new encodings based of selection networks:
+
+  4-Wise Selection Network
+  4-Odd-Even Selection Network
+
+We have also provided our implementation of the Pairwise Cardinality Networks.
+Those three encodings can be found in `encodings/Encodings_MW.h`.
+
+Content of the original MiniCARD 1.1 README file follows:
+
 MiniCARD 1.1, based on MiniSAT 2.2.0
  Mark Liffiton and Jordyn Maglalang
  <mliffito@iwu.edu>,<jmaglala@iwu.edu>
