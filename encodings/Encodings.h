@@ -26,7 +26,8 @@ enum EncodingType {
     PAIRWISE = 6,
     SEL_2WISE = 10,
     SEL_4WISE = 14,
-    SEL_4ODD_EVEN = 22
+    SEL_4ODD_EVEN = 22,
+    MTOT = 30
 };
 
 #include "encodings/Encodings_MW.h"
@@ -99,6 +100,7 @@ fprintf(stderr,"Encoding = %d\n", ctype);
     }
     
     Encoding_MW<Solver> *enc = new Encoding_MW<Solver>(S, ctype);
+    Encoding_TOT<Solver> *enc_tot = new Encoding_TOT<Solver>(S);
 
     switch(ctype) {
     case ITE:
@@ -124,11 +126,14 @@ fprintf(stderr,"Encoding = %d\n", ctype);
       return enc->makeSelConstr(lits, k, outvars,&Encoding_MW<Solver>::make4wiseSel);
     case SEL_4ODD_EVEN:
       return enc->makeSelConstr(lits, k, outvars,&Encoding_MW<Solver>::make4OddEvenSel);
+    case MTOT:
+      return enc_tot->makeModuloTotalizer(lits, outvars, k);
     default:
         assert(0);
         return false;
     }
     delete enc;
+    delete enc_tot;
 }
 
 
