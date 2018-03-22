@@ -45,9 +45,9 @@ bool Encoding_TOT<Solver>::makeModuloTotalizer(const vector<Lit>& invars, vector
 
   vec<long long int> cc; // cardinality constraints
   cc.clear();
-        vec<Lit> dummy;
+  vec<Lit> dummy;
 
-  // koshi 20140701        lbool ret = S.solveLimited(dummy);
+  // koshi 20140701
   lbool ret;
 
   while ((ret = S.solveLimited(dummy)) == l_True) { // koshi 20140107
@@ -68,7 +68,7 @@ bool Encoding_TOT<Solver>::makeModuloTotalizer(const vector<Lit>& invars, vector
     }
 
     if (lcnt == 1) { // first model: generate cardinal constraints
-      genCardinals(card, comp, weights,blockings, answer,answerNew,divisor, S, lits, linkingVar);
+      genCardinals(card, comp, weights, blockings, answer, answerNew, divisor, S, lits, linkingVar);
     }
     
     if (answerNew > 0) {
@@ -100,13 +100,13 @@ void genCardinals(int& card, int comp,
   wbFilter(k,S,lits, sweights,sblockings, weights,blockings);
   long long int sum = sumWeight(weights); // koshi 20140124
  
-  genOgawa0(card, weights, blockings, max, k, divisor, comp, S, lits, linkingVar);
+  genOgawa0(weights, blockings, max, k, divisor, S, lits, linkingVar);
 
   sweights.clear(); sblockings.clear();
 }
 
 // koshi 13.04.05, 13.06.28, 13.07.01, 13.10.04
-void lessthan(int card, vec<Lit>& linking, long long int ok, long long int k,
+void lessthan(vec<Lit>& linking, long long int ok, long long int k,
               long long int divisor, // koshi 13.10.04
               vec<long long int>& cc, Solver& S, vec<Lit>& lits) {
   long long int upper = (k-1)/divisor;
@@ -143,7 +143,7 @@ void lessthan(int card, vec<Lit>& linking, long long int ok, long long int k,
 void genOgawa(long long int weightX, vec<Lit>& linkingX,
         long long int weightY, vec<Lit>& linkingY,
         long long int& total, long long int divisor,
-        Lit zero, Lit one, int comp,Solver& S, 
+        Lit zero, Lit one,Solver& S, 
         vec<Lit>& lits, vec<Lit>& linkingVar, long long int UB) {
 
   total = weightX+weightY;
@@ -204,7 +204,7 @@ void genOgawa(long long int weightX, vec<Lit>& linkingX,
 
 void genOgawa(vec<long long int>& weights, vec<Lit>& blockings,
         long long int& total, long long int divisor,
-        Lit zero, Lit one, int comp,Solver& S, 
+        Lit zero, Lit one,Solver& S, 
         vec<Lit>& lits, vec<Lit>& linkingVar, long long int UB) {
 
   linkingVar.clear();
@@ -214,8 +214,7 @@ void genOgawa(vec<long long int>& weights, vec<Lit>& blockings,
 
   if (total < divisor) {
     vec<Lit> linking;
-    genBailleux(weights,blockings,total,
-    zero,one, comp,S, lits, linking, UB);
+    genBailleux(weights,blockings,total, zero,one, S, lits, linking, UB);
     total = linking.size()-2;
     for(int i = 0; i < divisor; i++) 
       if (i < linking.size()) linkingVar.push(linking[i]);
@@ -270,10 +269,9 @@ void genOgawa(vec<long long int>& weights, vec<Lit>& blockings,
   while (divisor+upper+2 < linkingVar.size()) linkingVar.shrink(1);
 }
 
-void genOgawa0(int& card, // koshi 2013.12.24
-         vec<long long int>& weights, vec<Lit>& blockings,
+void genOgawa0(vec<long long int>& weights, vec<Lit>& blockings,
          long long int max, long long int k,
-         long long int& divisor, int comp, Solver& S,
+         long long int& divisor, Solver& S,
          vec<Lit>& lits, vec<Lit>& linkingVar) {
 
   long long int k0 = k;
@@ -285,23 +283,15 @@ void genOgawa0(int& card, // koshi 2013.12.24
     k0 -= odd;
     odd += 2;
   }
-  printf("c max = %lld, divisor = %lld\n", max,divisor);
 
-  // koshi 2013.12.24
   if (divisor <= 2) {
-    printf("c divisor is less than or equal to 2 ");
-    printf("so we use Warner's encoding, i.e. -card=warn\n");
-    card = 0;
-    genWarners0(weights,blockings, max,k, comp, S, lits,linkingVar);
+    genWarners0(weights,blockings, max,k, S, lits,linkingVar);
   } else {
-    // koshi 20140109
-    printf("c Ogawa's encoding for Cardinality Constraints\n");
-
     Lit one = mkLit(S.newVar());
     lits.clear();
     lits.push(one);
     S.addClause_(lits);
-    genOgawa(weights,blockings, max,divisor, ~one, one, comp,S, lits, linkingVar, k);
+    genOgawa(weights,blockings, max,divisor, ~one, one, S, lits, linkingVar, k);
   }
 }
 
@@ -318,8 +308,7 @@ void genOgawa0(int& card, // koshi 2013.12.24
  */
 
 // koshi 2013.04.16
-void genWarnersHalf(Lit& a, Lit& b, Lit& carry, Lit& sum, int comp,
-           Solver& S, vec<Lit>& lits) {
+void genWarnersHalf(Lit& a, Lit& b, Lit& carry, Lit& sum, Solver& S, vec<Lit>& lits) {
   // carry
   lits.clear();
   lits.push(~a); lits.push(~b); lits.push(carry);  S.addClause_(lits);
@@ -328,36 +317,10 @@ void genWarnersHalf(Lit& a, Lit& b, Lit& carry, Lit& sum, int comp,
   lits.push(a); lits.push(~b); lits.push(sum);  S.addClause_(lits);
   lits.clear();
   lits.push(~a); lits.push(b); lits.push(sum);  S.addClause_(lits);
-  //
-  if (comp == 1 || comp == 2) {
-    lits.clear();
-    lits.push(carry); lits.push(sum); lits.push(~a); S.addClause_(lits);
-    lits.clear();
-    lits.push(carry); lits.push(sum); lits.push(~b); S.addClause_(lits);
-  }
-  if (comp == 2) {
-    lits.clear();
-    lits.push(~carry); lits.push(~sum); S.addClause_(lits);
-    lits.clear();
-    lits.push(~carry); lits.push(sum); lits.push(a); S.addClause_(lits);
-    lits.clear();
-    lits.push(~carry); lits.push(sum); lits.push(b); S.addClause_(lits);
-  }
-  // koshi 2013.05.31
-  if (comp == 10 || comp == 11) { // [Warners 1996]
-    // carry
-    lits.clear(); lits.push(a); lits.push(~carry); S.addClause_(lits);
-    lits.clear(); lits.push(b); lits.push(~carry); S.addClause_(lits);
-    // sum
-    lits.clear();
-    lits.push(~a); lits.push(~b); lits.push(~sum);  S.addClause_(lits);
-    lits.clear();
-    lits.push(a); lits.push(b); lits.push(~sum);  S.addClause_(lits);
-  }
 }
 
 // koshi 2013.04.16
-void genWarnersFull(Lit& a, Lit& b, Lit& c, Lit& carry, Lit& sum, int comp,
+void genWarnersFull(Lit& a, Lit& b, Lit& c, Lit& carry, Lit& sum,
            Solver& S, vec<Lit>& lits) {
   // carry
   lits.clear();
@@ -379,45 +342,6 @@ void genWarnersFull(Lit& a, Lit& b, Lit& c, Lit& carry, Lit& sum, int comp,
   lits.clear();
   lits.push(~a); lits.push(~b); lits.push(~c); lits.push(sum);
   S.addClause_(lits);
-  if (comp == 1 || comp == 2) {
-    lits.clear();
-    lits.push(carry); lits.push(sum); lits.push(~a); S.addClause_(lits);
-    lits.clear();
-    lits.push(carry); lits.push(sum); lits.push(~b); S.addClause_(lits);
-    lits.clear();
-    lits.push(carry); lits.push(sum); lits.push(~c); S.addClause_(lits);
-  }
-  if (comp == 2) {
-    lits.clear();
-    lits.push(~carry); lits.push(~sum); lits.push(a); S.addClause_(lits);
-    lits.clear();
-    lits.push(~carry); lits.push(~sum); lits.push(b); S.addClause_(lits);
-    lits.clear();
-    lits.push(~carry); lits.push(~sum); lits.push(c); S.addClause_(lits);
-  }
-  // koshi 2013.05.31
-  if (comp == 10 || comp == 11) {// [Warners 1996]
-    // carry
-    lits.clear();
-    lits.push(a); lits.push(b); lits.push(~carry); S.addClause_(lits);
-    lits.clear();
-    lits.push(a); lits.push(c); lits.push(~carry); S.addClause_(lits);
-    lits.clear();
-    lits.push(b); lits.push(c); lits.push(~carry); S.addClause_(lits);
-    // sum
-    lits.clear();
-    lits.push(a); lits.push(b); lits.push(c); lits.push(~sum);
-    S.addClause_(lits);
-    lits.clear();
-    lits.push(~a); lits.push(~b); lits.push(c); lits.push(~sum);
-    S.addClause_(lits);
-    lits.clear();
-    lits.push(~a); lits.push(b); lits.push(~c); lits.push(~sum);
-    S.addClause_(lits);
-    lits.clear();
-    lits.push(a); lits.push(~b); lits.push(~c); lits.push(~sum);
-    S.addClause_(lits);
-  }
 }
 
 
@@ -431,7 +355,7 @@ void genWarners(vec<long long int>& weights, vec<Lit>& blockings,
     vec<Lit>& lits, vec<Lit>& linkingVar) {
 
   linkingVar.clear();
-  bool dvar = (comp == 11) ? false : true;
+  bool dvar = true;
 
   if (weights.size() == 1) {
     long long int weight = weights[0];
@@ -470,7 +394,7 @@ void genWarners(vec<long long int>& weights, vec<Lit>& blockings,
     vec<Lit> &larges = lessthan ? beta : alpha;
     assert(smalls.size() <= larges.size());
 
-    genWarnersHalf(smalls[0],larges[0], carry,sum, comp, S,lits);
+    genWarnersHalf(smalls[0],larges[0], carry,sum, S,lits);
     linkingVar.push(sum);
 
     int i = 1;
@@ -478,14 +402,14 @@ void genWarners(vec<long long int>& weights, vec<Lit>& blockings,
     for(; i < smalls.size(); i++) {
       sum = mkLit(S.newVar(true,dvar));
       carryN = mkLit(S.newVar(true,dvar));
-      genWarnersFull(smalls[i],larges[i],carry, carryN,sum, comp, S,lits);
+      genWarnersFull(smalls[i],larges[i],carry, carryN,sum, S,lits);
       linkingVar.push(sum);
       carry = carryN;
     }
     for(; i < larges.size(); i++) {
       sum = mkLit(S.newVar(true,dvar));
       carryN = mkLit(S.newVar(true,dvar));
-      genWarnersHalf(larges[i],carry, carryN,sum, comp, S,lits);
+      genWarnersHalf(larges[i],carry, carryN,sum, S,lits);
       linkingVar.push(sum);
       carry = carryN;
     }
@@ -513,7 +437,7 @@ void genWarners0(vec<long long int>& weights, vec<Lit>& blockings,
   lits.clear();
   lits.push(~zero);
   S.addClause_(lits);
-  genWarners(weights,blockings, max,logk, comp, S, zero,lits,linkingVar);
+  genWarners(weights,blockings, max,logk, S, zero,lits,linkingVar);
 }
 
 #define wbsplit(half,wL,wR, ws,bs, wsL,bsL, wsR,bsR) \
