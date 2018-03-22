@@ -26,7 +26,8 @@ enum EncodingType {
     PAIRWISE = 6,
     SEL_2WISE = 10,
     SEL_4WISE = 14,
-    SEL_4ODD_EVEN = 22
+    SEL_4ODD_EVEN = 22,
+    SEL_2ODD_EVEN = 23
 };
 
 #include "encodings/Encodings_MW.h"
@@ -82,7 +83,7 @@ public:
 
 template<class Solver>
 bool Encoding<Solver>::makeAtMost(const vector<Lit>& lits, unsigned const k, vector<Lit>* outvars) {
-fprintf(stderr,"Encoding = %d\n", ctype); 
+//fprintf(stderr,"Encoding = %d\n", ctype); 
     if (lits.size() == k) {
         // no bound needed, return a trivial "constraint"
         return true;
@@ -122,6 +123,8 @@ fprintf(stderr,"Encoding = %d\n", ctype);
       return enc->makeSelConstr(lits, k, outvars,&Encoding_MW<Solver>::make2wiseSel);
     case SEL_4WISE:
       return enc->makeSelConstr(lits, k, outvars,&Encoding_MW<Solver>::make4wiseSel);
+    case SEL_2ODD_EVEN:
+      return enc->makeSelConstr(lits, k, outvars,&Encoding_MW<Solver>::make2OddEvenSel);
     case SEL_4ODD_EVEN:
       return enc->makeSelConstr(lits, k, outvars,&Encoding_MW<Solver>::make4OddEvenSel);
     default:

@@ -94,6 +94,7 @@ int main(int argc, char** argv)
         IntOption    cpu_lim("MAIN", "cpu-lim","Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
         IntOption    mem_lim("MAIN", "mem-lim","Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
         IntOption    convert("MAIN", "convert-to", "If > 0, then output converted CNF+ in other format (1=cnf)", 0, IntRange(0,1));
+        IntOption    direct_net("MAIN", "dcn", "Mixing Direct Cardinality Networks (0=no 1=yes)", 1, IntRange(0,1));
 
         
         parseOptions(argc, argv, true);
@@ -102,7 +103,8 @@ int main(int argc, char** argv)
         double initial_time = cpuTime();
 
         S.verbosity = verb;
-        
+        S.direct_net = direct_net;
+
         solver = &S;
         // Use signal handlers that forcibly quit until the solver will be able to respond to
         // interrupts:
@@ -191,7 +193,7 @@ int main(int argc, char** argv)
             printf("c \n");
         }
         printf(ret == l_True ? "s SATISFIABLE\n" : ret == l_False ? "s UNSATISFIABLE\n" : "s UNKNOWN\n");
-        if (ret==l_True && S.verbosity >= 1) {
+        if (ret==l_True && S.verbosity >= 2) {
             printf("v");
             for (int i = 0; i < S.nVars(); i++)
                 if (S.model[i] != l_Undef)

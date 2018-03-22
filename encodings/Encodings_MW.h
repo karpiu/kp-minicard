@@ -72,8 +72,10 @@ class Encoding_MW {
   void make4wiseMerge(vector<Lit> const& a, vector<Lit> const& b, vector<Lit> const& c, vector<Lit> const& d, vector<Lit>& outvars, unsigned int k);
 
   void Direct4Combine(vector<Lit> const& in1, vector<Lit> const& in2, vector<Lit>& outvars, unsigned k);
+  void OddEvenCombine(vector<Lit> const& in1, vector<Lit> const& in2, vector<Lit>& outvars, unsigned k);
   void make4OddEvenMerge(vector<Lit> const& a, vector<Lit> const& b, vector<Lit> const& c, vector<Lit> const& d, vector<Lit>& outvars, unsigned int k);
-  
+  void make2OddEvenMerge(vector<Lit> const& a, vector<Lit> const& b, vector<Lit>& outvars, unsigned int k);
+
   void make4Comparator(Lit const& x1, Lit const& x2, Lit const& x3, Lit const& x4, Lit& y1, Lit& y2, Lit& y3, Lit& y4);
   void make3Comparator(Lit const& x1, Lit const& x2, Lit const& x3, Lit& y1, Lit& y2, Lit& y3);
   inline void make2Comparator(Lit const& a, Lit const& b, Lit& c1, Lit& c2);
@@ -103,6 +105,7 @@ class Encoding_MW {
  public:
   bool make2wiseSel(const vector<Lit>& invars, vector<Lit>& outvars, unsigned const k);
   bool make4wiseSel(const vector<Lit>& invars, vector<Lit>& outvars, unsigned const k);
+  bool make2OddEvenSel(const vector<Lit>& invars, vector<Lit>& outvars, unsigned const k);
   bool make4OddEvenSel(const vector<Lit>& invars, vector<Lit>& outvars, unsigned const k);
 
   bool makeSelConstr(const vector<Lit>& invars, unsigned const k, vector<Lit>* outvars,
@@ -200,7 +203,7 @@ bool Encoding_MW<Solver>::make2wiseSel(const vector<Lit>& invars, vector<Lit>& o
     return true;
   }
 
-  if (k<=1 || k==2 && n <= 39 || k==3 && n <= 10 || k==4 && n <= 8 || k<=7 && n<=7) {
+  if (S->direct_net && (k<=1 || k==2 && n <= 39 || k==3 && n <= 10 || k==4 && n <= 8 || k<=7 && n<=7)) {
     makeDirectNetwork(invars, outvars, k);
     return true;
   }
@@ -233,7 +236,7 @@ bool Encoding_MW<Solver>::make2wiseSel(const vector<Lit>& invars, vector<Lit>& o
   make2wiseSel(y, _y, k2);
 
   // merging
-  if (getOptFromDynamicMap(DirOr2wiseMerge,n,k) == 1)
+  if (S->direct_net && (getOptFromDynamicMap(DirOr2wiseMerge,n,k) == 1))
     DirectPairwiseMerge(_x,_y,outvars,k);
   else
     make2wiseMerge(_x, _y, outvars, k);
@@ -488,6 +491,141 @@ void Encoding_MW<Solver>::make4wiseMerge(vector<Lit> const& a, vector<Lit> const
 }
 
 template<class Solver>
+bool Encoding_MW<Solver>::make2OddEvenSel(const vector<Lit>& invars, vector<Lit>& outvars, unsigned const k) {
+  assert(outvars.empty());
+
+  unsigned n = invars.size();
+
+  assert(k <= n);
+
+  if (k==0) {
+    for (unsigned i = 0 ; i < n ; i++) {
+      if(invars[i] == lit_Undef) continue;
+      S->addClause(~invars[i]);
+    }
+    return true;
+  }
+  if (n==0) return true;
+  if (n == 1) {
+    outvars.push_back(invars[0]);
+    return true;
+  }
+ 
+  if (S->direct_net && (k <= 1 || k == 2 && n <= 9 || n <= 6)) {
+    makeDirectNetwork(invars, outvars,k);
+    return true;
+  }
+  
+  // select sizes
+  unsigned n1, n2;
+  int p2 = (k==2 ? 1 : pow2roundup((k+4)/3));
+  n2 = (n <= 7 ? n/2 : abs((int)k/2-p2) > (k+3)/4 ? (k <= n/2 ? k : k/2) : (2*p2 <= n/2 ? 2*p2 : p2) );
+  n1 = n - n2;
+
+  
+  // split
+  vector<Lit> x, y;
+  for (unsigned i=0; i < n1; i++)
+      x.push_back(invars[i]);
+  for (unsigned i=n1; i < n; i++)
+      y.push_back(invars[i]);
+
+  // recursive calls
+  vector<Lit> _x, _y;
+  make2OddEvenSel(x, _x, min(k, n1));
+  make2OddEvenSel(y, _y, min(k, n2));
+
+  // merging
+  make2OddEvenMerge(_x, _y, outvars, k);
+
+  return true;
+}
+
+template<class Solver>
+void Encoding_MW<Solver>::OddEvenCombine(vector<Lit> const& in1, vector<Lit> const& in2, vector<Lit>& outvars, unsigned k) {
+    unsigned a = in1.size(), b = in2.size();
+    if (k > a+b) k = a+b;   
+ 
+    // set outvars[0] = in1[0];
+    outvars.push_back(in1[0]);
+
+    for (unsigned i = 0 ; i < (k-1)/2 ; i++) {
+        outvars.push_back(lit_Error); outvars.push_back(lit_Error);
+        make2Comparator(in2[i], in1[i+1], outvars[i*2+1], outvars[i*2+2]);
+    }
+
+    // set outvars[k-1] if needed
+    if (k % 2 == 0)  // k is even
+        if (k < a + b) {
+      S->newVar();
+      Lit ret = mkLit((unsigned)S->nVars()-1);
+            outvars.push_back(ret);
+      vec<Lit> args;
+      // in2[k/2-1] -> ret
+      args.push(~in2[k/2-1]);
+      args.push(ret);
+      S->addClause(args);
+      // in1[k/2] -> ret
+      args[0] = ~in1[k/2];
+      S->addClause(args);
+        }
+        else if (a == b) outvars.push_back(in2[k/2-1]);
+        else outvars.push_back(in1[k/2]);
+}
+    
+template<class Solver>
+void Encoding_MW<Solver>::make2OddEvenMerge(vector<Lit> const& in1, vector<Lit> const& in2, vector<Lit>& outvars, unsigned k) {
+    unsigned a = in1.size(), b = in2.size();
+    
+    if (a+b < k) k = a+b;
+    if (a > k) a = k;
+    if (b > k) b = k;
+    if (a == 0) {
+        for (unsigned i = 0 ; i < b ; i++) outvars.push_back(in2[i]);
+  return;
+    }
+    if (b == 0) {
+        for (unsigned i = 0 ; i < a ; i++) outvars.push_back(in1[i]);
+  return;
+    }
+    if (a == 1 && b == 1) {
+      if (k == 1) {
+      S->newVar();
+      Lit ret = mkLit((unsigned)S->nVars()-1);
+            outvars.push_back(ret);
+      vec<Lit> args;
+      // in1[0] -> ret
+      args.push(~in1[0]);
+      args.push(ret);
+      S->addClause(args);
+      // in2[0] -> ret
+      args[0] = ~in2[0];
+      S->addClause(args);
+      } else { // k == 2
+        outvars.push_back(lit_Error); outvars.push_back(lit_Error);
+        make2Comparator(in1[0], in2[0], outvars[0], outvars[1]);
+      }
+      return;
+    }
+    // from now on: a > 0 && b > 0 && && a,b <= k && 1 < k <= a + b 
+    
+    vector<Lit> in1odds, in2odds, in1evens, in2evens, tmp1, tmp2;
+    // in1evens = in1[0,2,4,...], in2evens same
+    // in1odds  = in1[1,3,5,...], in2odds same
+    for (unsigned i = 0 ; i < a; i+=2) {
+        in1evens.push_back(in1[i]);
+        if (i + 1 < a) in1odds.push_back(in1[i+1]);
+    }
+    for (unsigned i = 0 ; i < b; i+=2) {
+        in2evens.push_back(in2[i]);
+        if (i + 1 < b) in2odds.push_back(in2[i+1]);
+    }
+    make2OddEvenMerge(in1evens, in2evens, tmp1, k/2+1);
+    make2OddEvenMerge(in1odds, in2odds, tmp2, k/2);
+    OddEvenCombine(tmp1,tmp2,outvars,k);
+}
+
+template<class Solver>
 bool Encoding_MW<Solver>::make4OddEvenSel(const vector<Lit>& invars, vector<Lit>& outvars, unsigned const k) {
   assert(outvars.empty());
 
@@ -508,7 +646,7 @@ bool Encoding_MW<Solver>::make4OddEvenSel(const vector<Lit>& invars, vector<Lit>
     return true;
   }
  
-  if (k <= 1 || k == 2 && n <= 9 || n <= 6) {
+  if (S->direct_net && (k <= 1 || k == 2 && n <= 9 || n <= 6)) {
     makeDirectNetwork(invars, outvars,k);
     return true;
   }
@@ -541,7 +679,7 @@ bool Encoding_MW<Solver>::make4OddEvenSel(const vector<Lit>& invars, vector<Lit>
   make4OddEvenSel(d, _d, k4);
 
   // merging
-  if (k >= 184 || getOptFromDynamicMap(DirOr4wiseMerge,n,k) == 4 ) {
+  if (S->direct_net && (k >= 184 || getOptFromDynamicMap(DirOr4wiseMerge,n,k) == 4) ) {
       make4OddEvenMerge(_a, _b, _c, _d, outvars, k);
   } else {
       vector<Lit> out1,out2;

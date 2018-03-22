@@ -50,7 +50,7 @@ static IntOption     opt_restart_first     (_cat, "rfirst",      "The base resta
 static DoubleOption  opt_restart_inc       (_cat, "rinc",        "Restart interval increase factor", 2, DoubleRange(1, false, HUGE_VAL, false));
 static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction of wasted memory allowed before a garbage collection is triggered",  0.20, DoubleRange(0, false, HUGE_VAL, false));
 static BoolOption    opt_detect_clause     (_cat, "dt-clause",   "The parser will detect when specified constraints are clauses", false);
-static IntOption     opt_encoding_type     (_cat, "encode-type", "The type of encoding to use for cardinality constaints (1=BDD, 2=PSN, 3=PCN, 4=PSN3, 5=PCN3, 6=Pairwise, 10=2W_SEL, 14=4W_SEL, 22=4OE_SEL)", 1, IntRange(1,22));
+static IntOption     opt_encoding_type     (_cat, "encode-type", "The type of encoding to use for cardinality constaints (1=BDD, 2=PSN, 3=PCN, 4=PSN3, 5=PCN3, 6=Pairwise, 10=2W_SEL, 14=4W_SEL, 22=4OE_SEL, 23=2OE_SEL)", 1, IntRange(1,23));
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -61,6 +61,7 @@ Solver::Solver() :
     // Parameters (user settable):
     //
     verbosity        (0)
+  , direct_net       (1)
   , var_decay        (opt_var_decay)
   , clause_decay     (opt_clause_decay)
   , random_var_freq  (opt_random_var_freq)
