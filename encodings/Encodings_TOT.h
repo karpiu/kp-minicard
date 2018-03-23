@@ -38,69 +38,20 @@ template<class Solver>
 bool Encoding_TOT<Solver>::makeModuloTotalizer(const vector<Lit>& invars, vector<Lit>& outvars, unsigned const k) {
  
   vec<Lit> lits;
-  int lcnt = 0; // loop count
   vec<Lit> linkingVar;
-  bool mmodel[nbvar]; // koshi 2013.07.05
   long long int divisor = 1; // koshi 2013.10.04
-
-  vec<long long int> cc; // cardinality constraints
-  cc.clear();
-  vec<Lit> dummy;
-
-  // koshi 20140701
-  lbool ret;
-
-  while ((ret = S.solveLimited(dummy)) == l_True) { // koshi 20140107
-    lcnt++;
-    long long int answerNew = 0;
-
-    for (int i = 0; i < blockings.size(); i++) {
-      int varnum = var(blockings[i]);
-      if (sign(blockings[i])) {
-        if (S.model[varnum] == l_False) {
-          answerNew += weights[i];
-        }
-      } else {
-        if (S.model[varnum] == l_True) {
-          answerNew += weights[i];
-        }
-      }
-    }
-
-    if (lcnt == 1) { // first model: generate cardinal constraints
-      genCardinals(card, comp, weights, blockings, answer, answerNew, divisor, S, lits, linkingVar);
-    }
-    
-    if (answerNew > 0) {
-      lessthan(card, linkingVar, answer,answerNew,divisor, cc, S, lits);
-      answer = answerNew;
-    } else {
-      answer = answerNew;
-      ret = l_False; // koshi 20140124
-      break;
-    }
-  } // end of while
-
+  
+  genCardinals(blockings, divisor, S, lits, linkingVar);
 
   return true;
 }
 
-// koshi 2013.04.05, 2013.05.21, 2013.06.28, 2013.07.01, 2013.10.04
-// koshi 20140121
-void genCardinals(int& card, int comp,
-      vec<long long int>& weights, vec<Lit>& blockings, 
-      long long int max, long long int k, 
-      long long int& divisor, // koshi 2013.10.04
+void genCardinals(vec<Lit>& blockings, 
+      long long int max, long long int k, long long int& divisor,
       Solver& S, vec<Lit>& lits, vec<Lit>& linkingVar) {
-  assert(weights.size() == blockings.size());
 
-  vec<long long int> sweights;
-  vec<Lit> sblockings;
-  wbSort(weights,blockings, sweights,sblockings);
-  wbFilter(k,S,lits, sweights,sblockings, weights,blockings);
-  long long int sum = sumWeight(weights); // koshi 20140124
  
-  genOgawa0(weights, blockings, max, k, divisor, S, lits, linkingVar);
+  genOgawa0(blockings, max, k, divisor, S, lits, linkingVar);
 
   sweights.clear(); sblockings.clear();
 }
