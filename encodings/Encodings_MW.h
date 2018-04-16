@@ -223,7 +223,7 @@ void Encoding_MW<Solver>::Direct4Combine(vector<Lit> const& x, vector<Lit> const
             if (i < a && i < b+1) // x[i] & y[i-1] -> ret
                 addClause(~x[i], ~y[i-1], ret);
         } else {  // new y[i] = max( max(y[i], x[i+2]), min(y[i-1], x[i+1]) ) = y[i] || x[i+2] || y[i-1] && x[i+1]
-            if (i+2 < a) // x[i+2] -> ret
+            if (i > 0 && i+2 < a) // x[i+2] -> ret
                addClause(~x[i+2], ret);
             if (i < b) // y[i] -> ret
                addClause(~y[i], ret);
