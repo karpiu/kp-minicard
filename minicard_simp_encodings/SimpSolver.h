@@ -78,7 +78,6 @@ class SimpSolver : public Solver {
     //
     virtual void garbageCollect();
 
-
     // Generate a (possibly simplified) DIMACS file:
     //
 #if 0
@@ -101,7 +100,9 @@ class SimpSolver : public Solver {
     bool    use_rcheck;        // Check if a clause is already implied. Prett costly, and subsumes subsumptions :)
     bool    use_elim;          // Perform variable elimination.
 
-    int       encoding_type;      // The type of encoding to use for atmosts (native, ite, psn, pcn }
+    int     direct_net;
+
+    int     encoding_type;      // The type of encoding to use for atmosts (native, ite, psn, pcn }
 
     // Statistics:
     //

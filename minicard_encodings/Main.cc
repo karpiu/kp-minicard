@@ -85,7 +85,7 @@ int main(int argc, char** argv)
 #if defined(__linux__)
         fpu_control_t oldcw, newcw;
         _FPU_GETCW(oldcw); newcw = (oldcw & ~_FPU_EXTENDED) | _FPU_DOUBLE; _FPU_SETCW(newcw);
-        printf("c WARNING: for repeatability, setting FPU to use double precision\n");
+        //printf("c WARNING: for repeatability, setting FPU to use double precision\n");
 #endif
         // Extra options:
         //

@@ -44,8 +44,7 @@ static IntOption    opt_grow             (_cat, "grow",         "Allow a variabl
 static IntOption    opt_clause_lim       (_cat, "cl-lim",       "Variables are not eliminated if it produces a resolvent with a length above this limit. -1 means no limit", 20,   IntRange(-1, INT32_MAX));
 static IntOption    opt_subsumption_lim  (_cat, "sub-lim",      "Do not check if subsumption against a clause larger than this. -1 means no limit.", 1000, IntRange(-1, INT32_MAX));
 static DoubleOption opt_simp_garbage_frac(_cat, "simp-gc-frac", "The fraction of wasted memory allowed before a garbage collection is triggered during simplification.",  0.5, DoubleRange(0, false, HUGE_VAL, false));
-static IntOption     opt_encoding_type     (_cat, "encode-type", "The type of encoding to use for cardinality constaints (1=BDD, 2=PSN, 3=PCN, 4=PSN3, 5=PCN3, 6=Pairwise)", 1, IntRange(1,6));
-
+static IntOption     opt_encoding_type     (_cat, "encode-type", "The type of encoding to use for cardinality constaints (1=BDD, 2=PSN, 3=PCN, 4=PSN3, 5=PCN3, 6=Pairwise, 10=2W_SEL, 14=4W_SEL, 22=4OE_SEL, 23=2OE_SEL)", 1, IntRange(1,23));
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -59,6 +58,7 @@ SimpSolver::SimpSolver() :
   , use_asymm          (opt_use_asymm)
   , use_rcheck         (opt_use_rcheck)
   , use_elim           (opt_use_elim)
+  , direct_net         (1)
   , encoding_type    (opt_encoding_type)
   , merges             (0)
   , asymm_lits         (0)

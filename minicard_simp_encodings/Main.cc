@@ -35,6 +35,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "utils/ParseUtils.h"
 #include "utils/Options.h"
 #include "minicard_simp_encodings/Dimacs.h"
+#include "minicard_simp_encodings/opb.h"
 #include "minicard_simp_encodings/SimpSolver.h"
 
 using namespace Minisat;
@@ -46,11 +47,11 @@ void printStats(Solver& solver)
 {
     double cpu_time = cpuTime();
     double mem_used = memUsedPeak();
-    printf("c restarts              : %"PRIu64"\n", solver.starts);
-    printf("c conflicts             : %-12"PRIu64"   (%.0f /sec)\n", solver.conflicts   , solver.conflicts   /cpu_time);
-    printf("c decisions             : %-12"PRIu64"   (%4.2f %% random) (%.0f /sec)\n", solver.decisions, (float)solver.rnd_decisions*100 / (float)solver.decisions, solver.decisions   /cpu_time);
-    printf("c propagations          : %-12"PRIu64"   (%.0f /sec)\n", solver.propagations, solver.propagations/cpu_time);
-    printf("c conflict literals     : %-12"PRIu64"   (%4.2f %% deleted)\n", solver.tot_literals, (solver.max_literals - solver.tot_literals)*100 / (double)solver.max_literals);
+    printf("c restarts              : %" PRIu64"\n", solver.starts);
+    printf("c conflicts             : %-12" PRIu64"   (%.0f /sec)\n", solver.conflicts   , solver.conflicts   /cpu_time);
+    printf("c decisions             : %-12" PRIu64"   (%4.2f %% random) (%.0f /sec)\n", solver.decisions, (float)solver.rnd_decisions*100 / (float)solver.decisions, solver.decisions   /cpu_time);
+    printf("c propagations          : %-12" PRIu64"   (%.0f /sec)\n", solver.propagations, solver.propagations/cpu_time);
+    printf("c conflict literals     : %-12" PRIu64"   (%4.2f %% deleted)\n", solver.tot_literals, (solver.max_literals - solver.tot_literals)*100 / (double)solver.max_literals);
     if (mem_used != 0) printf("c Memory used           : %.2f MB\n", mem_used);
     printf("c CPU time              : %g s\n", cpu_time);
 }
@@ -91,8 +92,11 @@ int main(int argc, char** argv)
         IntOption    verb   ("MAIN", "verb",   "Verbosity level (0=silent, 1=some, 2=more).", 1, IntRange(0, 2));
         BoolOption   pre    ("MAIN", "pre",    "Completely turn on/off any preprocessing.", true);
         StringOption dimacs ("MAIN", "dimacs", "If given, stop after preprocessing and write the result to this file.");
+        BoolOption   opt_opb("MAIN", "opb",    "Parse the input as OPB (linear cardinality constraints only", false);
         IntOption    cpu_lim("MAIN", "cpu-lim","Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
         IntOption    mem_lim("MAIN", "mem-lim","Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
+        IntOption    convert("MAIN", "convert-to", "If > 0, then output converted CNF+ in other format (1=cnf)", 0, IntRange(0,1));
+        IntOption    direct_net("MAIN", "dcn", "Mixing Direct Cardinality Networks (0=no 1=yes)", 1, IntRange(0,1));
 
         parseOptions(argc, argv, true);
         
@@ -101,6 +105,7 @@ int main(int argc, char** argv)
 
         if (!pre) S.eliminate(true);
 
+        S.direct_net = direct_net;
         S.verbosity = verb;
         
         solver = &S;
@@ -141,7 +146,27 @@ int main(int argc, char** argv)
             printf("c ============================[ Problem Statistics ]=============================\n");
             printf("c |                                                                             |\n"); }
         
-        parse_DIMACS(in, S);
+        if (convert) {
+          if (opt_opb) parse_OPB(in, S);
+          else parse_DIMACS(in, S);
+          gzclose(in);
+
+          vec<Lit> assumps;
+          S.toDimacs(stdout, assumps);
+          exit(0);
+        }
+
+        if (S.verbosity > 0){
+            printf("c ============================[ Problem Statistics ]=============================\n");
+            printf("c |                                                                             |\n"); }
+        
+        if (opt_opb) {
+            parse_OPB(in, S);
+        }
+        else {
+            parse_DIMACS(in, S);
+        }
+
         gzclose(in);
         FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : NULL;
 

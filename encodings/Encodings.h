@@ -11,7 +11,6 @@
 #include <assert.h>
 #include <map>
 #include <vector>
-#include "core/SolverTypes.h"
 
 using namespace std;
 
