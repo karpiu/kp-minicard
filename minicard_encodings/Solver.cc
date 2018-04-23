@@ -947,6 +947,10 @@ void Solver::toDimacs(FILE* f, const vec<Lit>& assumps)
     // Assumptions are added as unit clauses:
     cnt += assumptions.size();
 
+    if (max == 0 && cnt == 0) { // trivially true
+        fprintf(f, "p cnf 1 1\n1 0\n");
+        return; }
+
     fprintf(f, "p cnf %d %d\n", max, cnt);
 
     for (int i = 0; i < assumptions.size(); i++){
