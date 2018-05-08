@@ -26,13 +26,13 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 template <class Solver>
 class Encoding_MW {
  public:
-  bool makeSelConstr(const vector<Lit>& invars, unsigned const k, vector<Lit>* outvars,
-        bool (Encoding_MW<Solver>::*makeAtMostSel)(const vector<Lit>& in, vector<Lit>& out, unsigned const k));
+  bool makeSelConstr(const vector<Lit>& invars, unsigned k, vector<Lit>* outvars,
+        bool (Encoding_MW<Solver>::*makeAtMostSel)(const vector<Lit>& in, vector<Lit>& out, unsigned k));
   
-  bool make4OddEvenSel(const vector<Lit>& invars, vector<Lit>& outvars, unsigned const k);
-  bool make2OddEvenSel(const vector<Lit>& invars, vector<Lit>& outvars, unsigned const k);
-  bool make4wiseSel(const vector<Lit>& invars, vector<Lit>& outvars, unsigned const k);
-  bool make2wiseSel(const vector<Lit>& invars, vector<Lit>& outvars, unsigned const k);
+  bool make4OddEvenSel(const vector<Lit>& invars, vector<Lit>& outvars, unsigned k);
+  bool make2OddEvenSel(const vector<Lit>& invars, vector<Lit>& outvars, unsigned k);
+  bool make4wiseSel(const vector<Lit>& invars, vector<Lit>& outvars, unsigned k);
+  bool make2wiseSel(const vector<Lit>& invars, vector<Lit>& outvars, unsigned k);
 
   Encoding_MW(Solver* _S, EncodingType ct) : S(_S), ctype(ct) { }
   ~Encoding_MW() { }
@@ -54,6 +54,11 @@ private:
   void make3Comparator(Lit const& x1, Lit const& x2, Lit const& x3, Lit& y1, Lit& y2, Lit& y3);
   inline void make2Comparator(Lit const& a, Lit const& b, Lit& c1, Lit& c2);
 
+  inline void make2Comparator(Lit& x1, Lit& x2)          { Lit y1,y2;    y1=y2=lit_Error;    make2Comparator(x1, x2, y1, y2);         x1=y1; x2=y2; }
+  inline void make3Comparator(Lit& x1, Lit& x2, Lit& x3) { Lit y1,y2,y3; y1=y2=y3=lit_Error; make3Comparator(x1, x2, x3, y1, y2, y3); x1=y1; x2=y2; x3=y3; }
+  inline void make4Comparator(Lit& x1, Lit& x2, Lit& x3, Lit& x4) { 
+    Lit y1,y2,y3,y4; y1=y2=y3=y4=lit_Error; make4Comparator(x1, x2, x3, x4, y1, y2, y3, y4); x1=y1; x2=y2; x3=y3; x4=y4; }
+
   bool makeDirectNetwork(const vector<Lit>& invars, vector<Lit>& outvars, unsigned k);
   void DirectCardClauses(const vector<Lit>& invars, unsigned start, unsigned pos, unsigned j, vec<Lit>& args);
 
@@ -72,18 +77,35 @@ private:
     return x+1;
   }
   inline void addClause(Lit const& x1, Lit const& x2) { 
-    vec<Lit> args; args.push(x1); args.push(x2); S->addClause(args); }
+    vec<Lit> args; 
+    if (x1 == lit_Error || x2 == lit_Error) return;
+    if (x1 != lit_Undef) args.push(x1); if (x2 != lit_Undef) args.push(x2); 
+    S->addClause(args); }
   inline void addClause(Lit const& x1, Lit const& x2, Lit const& x3) { 
-    vec<Lit> args; args.push(x1); args.push(x2); args.push(x3); S->addClause(args); }
+    vec<Lit> args; 
+    if (x1 == lit_Error || x2 == lit_Error || x3 == lit_Error) return;
+    if (x1 != lit_Undef) args.push(x1); if (x2 != lit_Undef) args.push(x2); 
+    if (x3 != lit_Undef) args.push(x3); 
+    S->addClause(args); }
   inline void addClause(Lit const& x1, Lit const& x2, Lit const& x3, Lit const& x4) { 
-    vec<Lit> args; args.push(x1); args.push(x2); args.push(x3); args.push(x4); S->addClause(args); }
+    vec<Lit> args; 
+    if (x1 == lit_Error || x2 == lit_Error || x3 == lit_Error || x4 == lit_Error) return;
+    if (x1 != lit_Undef) args.push(x1); if (x2 != lit_Undef) args.push(x2); 
+    if (x3 != lit_Undef) args.push(x3); if (x4 != lit_Undef) args.push(x4); 
+    S->addClause(args); }
   inline void addClause(Lit const& x1, Lit const& x2, Lit const& x3, Lit const& x4, Lit const& x5) { 
-    vec<Lit> args; args.push(x1); args.push(x2); args.push(x3); args.push(x4); args.push(x5); S->addClause(args); }
+    vec<Lit> args; 
+    if (x1 == lit_Error || x2 == lit_Error || x3 == lit_Error || x4 == lit_Error || x5 == lit_Error) 
+      return;
+    if (x1 != lit_Undef) args.push(x1); if (x2 != lit_Undef) args.push(x2); 
+    if (x3 != lit_Undef) args.push(x3); if (x4 != lit_Undef) args.push(x4); 
+    if (x5 != lit_Undef) args.push(x5);  
+    S->addClause(args); }
 };
 
 template<class Solver>
-bool Encoding_MW<Solver>::makeSelConstr(const vector<Lit>& lits, unsigned const k, vector<Lit>* p_outvars,
-    bool (Encoding_MW<Solver>::*makeAtMostSel)(const vector<Lit>& in, vector<Lit>& out, unsigned const k)) {
+bool Encoding_MW<Solver>::makeSelConstr(const vector<Lit>& lits, unsigned k, vector<Lit>* p_outvars,
+    bool (Encoding_MW<Solver>::*makeAtMostSel)(const vector<Lit>& in, vector<Lit>& out, unsigned k)) {
   // input vars
   vector<Lit> invars;
   for (unsigned i = 0 ; i < lits.size() ; i++) {
@@ -126,7 +148,7 @@ static bool preferDirectMerge(unsigned n, unsigned k) {
 }
 
 template<class Solver>
-bool Encoding_MW<Solver>::make4OddEvenSel(const vector<Lit>& invars, vector<Lit>& outvars, unsigned const k) {
+bool Encoding_MW<Solver>::make4OddEvenSel(const vector<Lit>& invars, vector<Lit>& outvars, unsigned k) {
   assert(outvars.empty());
 
   unsigned n = invars.size();
@@ -243,7 +265,7 @@ void Encoding_MW<Solver>::Direct4Combine(vector<Lit> const& x, vector<Lit> const
 }
     
 template<class Solver>
-bool Encoding_MW<Solver>::make2OddEvenSel(const vector<Lit>& invars, vector<Lit>& outvars, unsigned const k) {
+bool Encoding_MW<Solver>::make2OddEvenSel(const vector<Lit>& invars, vector<Lit>& outvars, unsigned k) {
   assert(outvars.empty());
 
   unsigned n = invars.size();
@@ -380,149 +402,100 @@ void Encoding_MW<Solver>::make2wiseMerge(vector<Lit> const& x, vector<Lit> const
 }  
 
 template<class Solver>
-bool Encoding_MW<Solver>::make2wiseSel(const vector<Lit>& invars, vector<Lit>& outvars, unsigned const k) {
+bool Encoding_MW<Solver>::make2wiseSel(const vector<Lit>& invars, vector<Lit>& outvars, unsigned k) {
   assert(outvars.empty());
 
   unsigned n = invars.size();
-
-  assert(k <= n);
+  k = min(k, n);
 
   if (k == 0) {
     for (unsigned i = 0 ; i < n ; i++) {
       if(invars[i] == lit_Undef) continue;
       S->addClause(~invars[i]);
     }
-    return true;
-  }
-
-  if (n == 0) return true;
-  if (n == 1) {
+  } else if (n == 1) 
     outvars.push_back(invars[0]);
-    return true;
-  }
-
-  if (n <= 2 || S->direct_net && (k <= 1 || k == 2 && n <= 9 || n <= 6)) {
+  else if (n <= 2 || S->direct_net && (k <= 1 || k == 2 && n <= 9 || n <= 6))
     makeDirectNetwork(invars, outvars, k);
-    return true;
+  else {
+    unsigned n1, n2;
+    int p2 = (pow2roundup((k+2)/3));
+    n2 = (n <= 7 ? n/2 : p2 <= (int)k/2 ? p2 : k-p2);
+    n1 = n - n2;
+
+    // split
+    vector<Lit> x(n1, lit_Error), y(n2, lit_Error);
+    for (unsigned i=0; i < n2; i++)
+      make2Comparator(invars[2*i], invars[2*i+1], x[i], y[i]);
+    for (unsigned i=n2; i < n1; i++) x[i] = invars[n2+i];
+
+    // recursive calls
+    vector<Lit> _x, _y;
+    make2wiseSel(x, _x, min(k, n1));
+    make2wiseSel(y, _y, min(k/2, n2));
+
+    // merging
+    if (S->direct_net && preferDirectMerge(_x.size()+_y.size(),k))
+      DirectPairwiseMerge(_x,_y,outvars,k);
+    else
+      make2wiseMerge(_x, _y, outvars, k);
   }
-
-  unsigned n1, n2;
-  int p2 = (pow2roundup((k+2)/3));
-  n2 = (n <= 7 ? n/2 : p2 <= (int)k/2 ? p2 : k-p2);
-  n1 = n - n2;
-
-  // split
-  vector<Lit> x, y;
-  for (unsigned i=0; i < n2; i++) {
-    x.push_back(lit_Error);
-    y.push_back(lit_Error);
-    make2Comparator(invars[2*i], invars[2*i+1], x[i], y[i]);
-  }
-
-  for (unsigned i=n2; i < n1; i++) {
-    x.push_back(lit_Error);
-    x[i] = invars[n2+i];
-  }
-
-  unsigned k1, k2;
-  k1 = min(k, n1);
-  k2 = min(k/2,n2);
-
-  // recursive calls
-  vector<Lit> _x, _y;
-  make2wiseSel(x, _x, k1);
-  make2wiseSel(y, _y, k2);
-
-  // merging
-  if (S->direct_net && preferDirectMerge(_x.size()+_y.size(),k))
-    DirectPairwiseMerge(_x,_y,outvars,k);
-  else
-    make2wiseMerge(_x, _y, outvars, k);
-
   return true;
 }
 
 template<class Solver>
-bool Encoding_MW<Solver>::make4wiseSel(const vector<Lit>& invars, vector<Lit>& outvars, unsigned const k) {
+bool Encoding_MW<Solver>::make4wiseSel(const vector<Lit>& invars, vector<Lit>& outvars, unsigned k) {
   assert(outvars.empty());
 
   unsigned n = invars.size();
-
-  assert(k <= n);
+  k = min(k,n);
 
   if (k==0) {
     for (unsigned i = 0 ; i < n ; i++) {
       if(invars[i] == lit_Undef) continue;
       S->addClause(~invars[i]);
     }
-    return true;
-  }
-  if (n==0) return true;
-  if (n == 1) {
+  } else if (n == 1) 
     outvars.push_back(invars[0]);
-    return true;
-  }
- 
-  if (k <= 1 || k == 2 && n <= 11 || n <= 6) {
+  else if (n <= 4 || S->direct_net && (k <= 1 || k == 2 && n <= 9 || n <= 6))
     makeDirectNetwork(invars, outvars,k);
-    return true;
-  }
+  else {
+      // select sizes
+      unsigned nn[4], kk[4], j = 0;
+      unsigned p2 = pow2roundup((k+5)/6); // a power of 2 near k/4
+      if (n >= 8 && 4*p2 <= n)  nn[1] = nn[2] = nn[3] = p2;
+      else if (n < 8 || k == n) nn[1]=(n+2)/4, nn[2]=(n+1)/4, nn[3]=n/4;
+      else                      nn[1] = nn[2] = nn[3] = k/4;
+      nn[0] = n - nn[1] - nn[2] - nn[3];
   
-  unsigned n1, n2, n3, n4, j = 0;
-  if (n <= 7) {
-    n4 = n/4; n3 = (n+1)/4; n2 = (n+2)/4;
-  } else {
-    int p2 = (k <= 5 ? 1 : pow2roundup((k+8)/6));
-    n4 = (4*p2 > (int)n ? k/4 : p2);
-    n3 = (n == k && n4 == k/4 ? (k+1)/4 : n4);
-    n2 = (n == k && n4 == k/4 ? (k+2)/4 : n4);
-  }
-  n1 = n - n2 - n3 - n4;
-  
-  // split
-  vector<Lit> a, b, c, d;
-  for (unsigned i=0; i < n4; i++,j+=4) {
-    a.push_back(lit_Error);
-    b.push_back(lit_Error);
-    c.push_back(lit_Error);
-    d.push_back(lit_Error);
-    make4Comparator(invars[j], invars[j+1], invars[j+2], invars[j+3], a[i], b[i], c[i], d[i]);
-  }
-  for (unsigned i=n4; i < n3; i++,j+=3) {
-    a.push_back(lit_Error);
-    b.push_back(lit_Error);
-    c.push_back(lit_Error);
-    make3Comparator(invars[j], invars[j+1], invars[j+2], a[i], b[i], c[i]);
-  }
-  for (unsigned i=n3; i < n2; i++,j+=2) {
-    a.push_back(lit_Error);
-    b.push_back(lit_Error);
-    make2Comparator(invars[j], invars[j+1], a[i], b[i]);
-  }
-  for (unsigned i=n2; i < n1; i++,j++) a.push_back(invars[j]);
+      // split
+      vector<Lit> a(nn[0],lit_Error), b(nn[1],lit_Error), c(nn[2],lit_Error), d(nn[3],lit_Error);
+      for (unsigned i=0;     i < nn[3]; i++,j+=4)
+        make4Comparator(invars[j], invars[j+1], invars[j+2], invars[j+3], a[i], b[i], c[i], d[i]);
+      for (unsigned i=nn[3]; i < nn[2]; i++,j+=3)
+        make3Comparator(invars[j], invars[j+1], invars[j+2], a[i], b[i], c[i]);
+      for (unsigned i=nn[2]; i < nn[1]; i++,j+=2)
+        make2Comparator(invars[j], invars[j+1], a[i], b[i]);
+      for (unsigned i=nn[1]; i < nn[0]; i++,j++) a[i] = invars[j];
 
-  unsigned k1, k2, k3, k4;
-  k1 = min(k, n1);
-  k2 = min(k/2, n2);
-  k3 = min(k/3, n3);
-  k4 = min(k/4, n4);
+      for (unsigned j=0; j < 4; j++) kk[j] = min(k/(j+1),nn[j]);
 
-  // recursive calls
-  vector<Lit> _a, _b, _c, _d;
-  make4wiseSel(a, _a, k1);
-  make4wiseSel(b, _b, k2);
-  make4wiseSel(c, _c, k3);
-  make4wiseSel(d, _d, k4);
+      // recursive calls
+      vector<Lit> _a, _b, _c, _d;
+      make4wiseSel(a, _a, kk[0]);
+      make4wiseSel(b, _b, kk[1]);
+      make4wiseSel(c, _c, kk[2]);
+      make4wiseSel(d, _d, kk[3]);
 
-  // merging
-  if (S->direct_net && preferDirectMerge(k1+k2+k3+k4,k)) {
-    vector<Lit> out1,out2;
-    unsigned kout=min(k1+k2,k);
-    DirectPairwiseMerge(_a,_b,out1,kout);
-    DirectPairwiseMerge(_c,_d,out2,k/2);
-    DirectPairwiseMerge(out1,out2,outvars,k);
-  } else
-    make4wiseMerge(_a, _b, _c, _d, outvars, k);
+     // merging
+     if (S->direct_net && preferDirectMerge(kk[0]+kk[1]+kk[2]+kk[3], k)) {
+       vector<Lit> out1,out2;
+       DirectPairwiseMerge(_a, _b, out1, min(kk[0]+kk[1], k));
+       DirectPairwiseMerge(_c, _d, out2, k/2);
+       DirectPairwiseMerge(out1, out2, outvars, k);
+     } else
+       make4wiseMerge(_a, _b, _c, _d, outvars, k);
+  }
   return true;
 }
 
@@ -538,38 +511,16 @@ void Encoding_MW<Solver>::make4wiseMerge(vector<Lit> const& a, vector<Lit> const
   while (h > 1) {
     h = h/2;
 
-    for (unsigned j=0; j<n4; j++) {
-      Lit aout = lit_Error, bout = lit_Error, cout = lit_Error, dout = lit_Error;
-      if ((j+h < n3) && (j + 2*h < n2) && (j + 3*h < n1)) {
-        make4Comparator(di[j], ci[j+h], bi[j+2*h], ai[j+3*h], dout, cout, bout, aout);
-	di[j] = dout; ci[j+h] = cout; bi[j+2*h] = bout; ai[j+3*h] = aout;
-      } else if ((j+h < n3) && (j + 2*h < n2)) {
-        make3Comparator(di[j], ci[j+h], bi[j+2*h], dout, cout, bout);
-	di[j] = dout; ci[j+h] = cout; bi[j+2*h] = bout;
-      } else if (j+h < n3) {
-        make2Comparator(di[j], ci[j+h], dout, cout);
-	di[j] = dout; ci[j+h] = cout;
-      }
-    }
+    for (unsigned j=0; j < n4 && j+h < n3; j++)
+      if (j + 2*h >= n2)      make2Comparator(di[j], ci[j+h]);
+      else if (j + 3*h >= n1) make3Comparator(di[j], ci[j+h], bi[j+2*h]);
+      else                    make4Comparator(di[j], ci[j+h], bi[j+2*h], ai[j+3*h]);
 
-    for (unsigned j=0; j<min(n3,h); j++) {
-      Lit aout = lit_Error, bout = lit_Error, cout = lit_Error;
-      if ((j+h < n2) && (j + 2*h < n1)) {
-        make3Comparator(ci[j], bi[j+h], ai[j+2*h], cout, bout, aout);
-	ci[j] = cout; bi[j+h] = bout; ai[j+2*h] = aout;
-      } else if (j+h < n2) {
-        make2Comparator(ci[j], bi[j+h], cout, bout);
-	ci[j] = cout; bi[j+h] = bout;
-      }
-    }
+    for (unsigned j=0; j < min(n3,h) && j+h < n2; j++)
+      if (j + 2*h >= n1)      make2Comparator(ci[j], bi[j+h]);
+      else                    make3Comparator(ci[j], bi[j+h], ai[j+2*h]);
 
-    for (unsigned j=0; j<min(n2,h); j++) {
-      Lit aout = lit_Error, bout = lit_Error;
-      if (j+h < n1) {
-        make2Comparator(bi[j], ai[j+h], bout, aout);
-        bi[j] = bout; ai[j+h] = aout;
-      }
-    }
+    for (unsigned j=0; j < min(n2,h) && j+h < n1; j++) make2Comparator(bi[j], ai[j+h]);
   }
 
   // correction start
@@ -577,60 +528,46 @@ void Encoding_MW<Solver>::make4wiseMerge(vector<Lit> const& a, vector<Lit> const
   
   for (unsigned j=0; j < n4 && j+1 < n1; j++) {
     S->newVar();
-    Lit dout = mkLit((unsigned int)S->nVars()-1);
+    dnew[j] = mkLit((unsigned int)S->nVars()-1);
     
-    addClause(~di[j], dout);
-    if (j+2 < n1) addClause(~ai[j+2], dout);
-    if (j+1 < n2) addClause(~bi[j+1], dout);
-    if (j > 0)    addClause(~ai[j+1], ~ci[j], ~di[j-1], dout); else addClause(~ai[j+1], ~ci[j], dout);
-    dnew[j] = dout;
+    addClause(~di[j], dnew[j]);
+    if (j+2 < n1) addClause(~ai[j+2], dnew[j]);
+    if (j+1 < n2) addClause(~bi[j+1], dnew[j]);
+    addClause(~ai[j+1], ~ci[j], (j > 0 ? ~di[j-1] : lit_Undef), dnew[j]);
   }
   for (unsigned j=0; j < (k+1)/4 && j+1 < n1; j++) {
     S->newVar();
-    Lit cout = mkLit((unsigned int)S->nVars()-1);
+    cnew[j] = mkLit((unsigned int)S->nVars()-1);
 
-    addClause(~ci[j], cout);
-    if (j > 0) addClause(~ai[j+1], ~di[j-1], cout); else addClause(~ai[j+1], cout);
-    cnew[j] = cout;
+    addClause(~ci[j], cnew[j]);
+    if (j > 0) addClause(~ai[j+1], (j > 0 ? ~di[j-1] : lit_Undef), cnew[j]);
   }
   for (unsigned j=1; j < min(n2,k/4+1); j++) {
     S->newVar();
-    Lit bout = mkLit((unsigned int)S->nVars()-1);
+    bnew[j] = mkLit((unsigned int)S->nVars()-1);
 
-    addClause(~bi[j], ~di[j-1], bout);
-    if (j+1 < n1) addClause(~bi[j], ~ai[j+1], bout);
-    bnew[j] = bout;
+    addClause(~bi[j], ~di[j-1], bnew[j]);
+    if (j+1 < n1) addClause(~bi[j], ~ai[j+1], bnew[j]);
   }
   for (unsigned j=1; j < min(n1,k/4+1); j++) {
     S->newVar();
-    Lit aout = mkLit((unsigned int)S->nVars()-1);
+    anew[j] = mkLit((unsigned int)S->nVars()-1);
 
-    if (j > 1) {
-      addClause(~ai[j], ~ci[j-1], ~di[j-1], ~di[j-2], aout);
-      if (j < n2) addClause(~ai[j], ~ci[j-1], ~bi[j], ~di[j-2], aout);
-      if (j+1 < n1) addClause(~ai[j], ~ci[j-1], ~ai[j+1], ~di[j-2], aout);
-    } else {
-      addClause(~ai[j], ~ci[j-1], ~di[j-1], aout);
-      if (j < n2) addClause(~ai[j], ~ci[j-1], ~bi[j], aout);
-      if (j+1 < n1) addClause(~ai[j], ~ci[j-1], ~ai[j+1], aout);
-    }
-    anew[j] = aout;
+    addClause(~ai[j], ~ci[j-1], ~di[j-1], (j > 1 ? ~di[j-2] : lit_Undef), anew[j]);
+    if (j < n2)   addClause(~ai[j], ~ci[j-1], ~bi[j],   (j > 1 ? ~di[j-2] : lit_Undef), anew[j]);
+    if (j+1 < n1) addClause(~ai[j], ~ci[j-1], ~ai[j+1], (j > 1 ? ~di[j-2] : lit_Undef), anew[j]);
   }
   if (k >= 3 && k/4+1 < n1) {
     S->newVar();
-    Lit aout = mkLit((unsigned int)S->nVars()-1);
+    anew[k/4+1] = mkLit((unsigned int)S->nVars()-1);
 
-    if (k/4 > 0) {
-      if (k/4 < (k+1)/4) addClause(~ai[k/4+1], ~di[k/4-1], ~ci[k/4], aout); else addClause(~ai[k/4+1], ~di[k/4-1],  aout);
-    } else
-      if (k/4 < (k+1)/4) addClause(~ai[k/4+1], ~ci[k/4], aout); else addClause(~ai[k/4+1],  aout);
-    anew[k/4+1] = aout;    
+    addClause(~ai[k/4+1], (k >= 4 ? ~di[k/4-1] : lit_Undef), (k%4==3 ? ~ci[k/4] : lit_Undef), anew[k/4+1]);
   }
   // correction end
 
   // copy k elements to outvars
   for (unsigned j=0; j<k; j++)
-    outvars.push_back(j % 4 == 0 ? anew[j/4] : (j % 4 == 1 ? bnew[j/4] : (j % 4 == 2 ? cnew[j/4] : dnew[j/4])));
+    outvars.push_back(j%4 == 0 ? anew[j/4] : (j%4 == 1 ? bnew[j/4] : (j%4 == 2 ? cnew[j/4] : dnew[j/4])));
   
   // set other literals to false
   for (unsigned j=(k+3)/4; j < n1; j++)
@@ -742,50 +679,6 @@ bool Encoding_MW<Solver>::makeDirectNetwork(const vector<Lit>& invars, vector<Li
   return true;
 }
 
-//<<<<<<< HEAD
-//=======
-// Direct Merging and Simplified Direct Merging
-/* template<class Solver> */
-/* void Encoding_MW<Solver>::DirectMerge(vector<Lit> const& in1, vector<Lit> const& in2, */
-/*                                       vector<Lit>& outvars, unsigned k) { */
-/*     // as described in CP'2013 paper: Abio, Nieuwenhuis, Oliveras and Rodriguez-Carbonell: */
-/*     // "A Parametric Approach for Smaller and Better Encodings of Cardinality Constraints", page 11 */
-
-/*     unsigned a = in1.size(), b = in2.size(); */
-/*     if (k > a + b) k = a + b; */
-/*     if (a > k) a = k; */
-/*     if (b > k) b = k; */
-    
-/*     for (unsigned i=0 ; i < k ; i++) { */
-/*         S->newVar(); */
-/*         Lit ret = mkLit((unsigned)S->nVars()-1); */
-/*         outvars.push_back(ret); */
-/*     } */
-/*     for (unsigned i=0 ; i < a ; i++) { */
-/*         vec<Lit> args; */
-/*         // in1[i] -> outvars[i] */
-/*         args.push(~in1[i]); */
-/*         args.push(outvars[i]); */
-/*         S->addClause(args); */
-/*         args.push(lit_Error); */
-/*         for (unsigned j=0 ; j < b && i + j + 1 < k ; j++) { */
-/*             // in1[i] & in2[j] -> outvars[i+j+1] */
-/*             args[1] = ~in2[j]; */
-/*             args[2] = outvars[i+j+1]; */
-/*             S->addClause(args); */
-/*         } */
-/*     } */
-/*     for (unsigned j=0 ; j < b ; j++) { */
-/*         vec<Lit> args; */
-/*         // in2[i] -> outvars[i] */
-/*         args.push(~in2[j]); */
-/*         args.push(outvars[j]); */
-/*         S->addClause(args); */
-/*     } */
-/* } */
-
-
-/* >>>>>>> e5eca5c77ade8878e1c224d56c1ef204d81110eb */
 template<class Solver>
 void Encoding_MW<Solver>::DirectCardClauses(const vector<Lit>& invars, unsigned start, unsigned pos, unsigned j, vec<Lit>& args) {
   unsigned n = invars.size();
@@ -801,72 +694,40 @@ void Encoding_MW<Solver>::DirectCardClauses(const vector<Lit>& invars, unsigned 
 
 template<class Solver>
 void Encoding_MW<Solver>::DirectPairwiseMerge(vector<Lit> const& in1, vector<Lit> const& in2,vector<Lit>& outvars, unsigned k) {
-  unsigned a = in1.size(), b = in2.size(), c = k;
-  if (c > a + b) c = a + b;
-  if (a > c) a = c;
-  if (b > c) b = c;
+  unsigned a = min(k, (unsigned)in1.size()), b = min(k, (unsigned)in2.size()), c = min(k, a + b);
 
-  //<<<<<<< HEAD
-  if (b == 0) {
-    for (unsigned i=0 ; i < c ; i++) outvars.push_back(in1[i]);
-    return;
-  }
-
-  //=======
-  //>>>>>>> e5eca5c77ade8878e1c224d56c1ef204d81110eb
-  for (unsigned i=0 ; i < k ; i++) {
-    S->newVar();
-    Lit ret = mkLit((unsigned)S->nVars()-1);
-    outvars.push_back(ret);
-  }
-
-  for (unsigned i=0 ; i < a ; i++) {
-    vec<Lit> args;
-    // in1[i] -> outvars[i]
-    args.push(~in1[i]);
-    args.push(outvars[i]);
-    S->addClause(args);
-  }
-  for (unsigned i=0 ; i < min(b,c/2) ; i++) {
-    vec<Lit> args;
-    // in2[i] -> outvars[2*i]
-    args.push(~in2[i]);
-    args.push(outvars[2*i+1]);
-    S->addClause(args);
-  }
-  for (unsigned j=0 ; j < b ; j++) {
-    for(unsigned i=j+1 ; i < min(a,c-j-1) ; i++) {
-      vec<Lit> args;
-      // in1[i] ^ in2[j] -> outvars[i+j]
-      args.push(~in1[i]);
-      args.push(~in2[j]);
-      args.push(outvars[i+j+1]);
-      S->addClause(args);
+  if (b == 0) for (unsigned i=0 ; i < c ; i++) outvars.push_back(in1[i]);
+  else {
+    for (unsigned i=0 ; i < c ; i++) {
+      S->newVar();
+      outvars.push_back(mkLit((unsigned)S->nVars()-1));
     }
+
+    for (unsigned i=0; i < a; i++)          addClause(~in1[i], outvars[i]);     // in1[i] -> outvars[i]
+    for (unsigned i=0; i < min(b,c/2); i++) addClause(~in2[i], outvars[2*i+1]); // in2[i] -> outvars[2*i+1]
+    for (unsigned j=0 ; j < b ; j++)
+      for (unsigned i=j+1; i < min(a,c-j-1); i++) 
+        addClause(~in1[i], ~in2[j], outvars[i+j+1]); // in1[i] ^ in2[j] -> outvars[i+j+1]
   }
 }
 
-//<<<<<<< HEAD
 template<class Solver>
 void Encoding_MW<Solver>::DirectMerge(vector<Lit> const& in1, vector<Lit> const& in2,vector<Lit>& outvars, unsigned k) {
-  unsigned a = in1.size(), b = in2.size(), c = k;
-  if (c > a + b) c = a + b;
-  if (a > c) a = c;
-  if (b > c) b = c;
+  unsigned a = min(k, (unsigned)in1.size()), b = min(k, (unsigned)in2.size()), c = min(k, a + b);
 
   if (b == 0)      for (unsigned i=0 ; i < c ; i++) outvars.push_back(in1[i]);
   else if (a == 0) for (unsigned i=0 ; i < c ; i++) outvars.push_back(in2[i]);
   else {
     for (unsigned i=0 ; i < c ; i++) {
       S->newVar();
-      Lit ret = mkLit((unsigned)S->nVars()-1);
-      outvars.push_back(ret);
+      outvars.push_back(mkLit((unsigned)S->nVars()-1));
     }
 
     for (unsigned i=0 ; i < a ; i++) addClause(~in1[i], outvars[i]); // in1[i] -> outvars[i]
     for (unsigned i=0 ; i < b ; i++) addClause(~in2[i], outvars[i]); // in2[i] -> outvars[i]
     for (unsigned j=0 ; j < b ; j++)
-      for(unsigned i=0 ; i < min(a,c-j-1) ; i++) addClause(~in1[i], ~in2[j], outvars[i+j+1]); // in1[i] ^ in2[j] -> outvars[i+ji+1]
+      for(unsigned i=0 ; i < min(a,c-j-1) ; i++) 
+        addClause(~in1[i], ~in2[j], outvars[i+j+1]); // in1[i] ^ in2[j] -> outvars[i+ji+1]
   }
 }
 
